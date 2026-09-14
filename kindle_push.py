@@ -2,16 +2,31 @@ import os
 import random
 import requests
 
-def parse_clippings(file_path):
-    if not os.path.exists(file_path):
-        print("未找到 My Clippings.txt 文件！")
-        return []
+def parse_clippings():
+    # 自动扫描常见的划线文件名
+    possible_names = [
+        "My Clippings.txt", 
+        "我的剪贴簿.txt", 
+        "My_Clippings.txt", 
+        "My Clippings.txt.txt", 
+        "我的剪贴簿.txt.txt"
+    ]
     
-    # 读取 Kindle 划线文件（自动兼容 UTF-8 BOM）
-    with open(file_path, 'r', encoding='utf-8-sig', errors='ignore') as f:
+    target_file = None
+    for name in possible_names:
+        if os.path.exists(name):
+            target_file = name
+            break
+            
+    if not target_file:
+        print("未找到划线文件！请检查是否已将 My Clippings.txt 上传至仓库根目录。")
+        return []
+        
+    print(f"成功读取文件: {target_file}")
+    
+    with open(target_file, 'r', encoding='utf-8-sig', errors='ignore') as f:
         content = f.read()
     
-    # Kindle 的固定条目分割符
     raw_entries = content.split('==========')
     highlights = []
     
@@ -19,11 +34,9 @@ def parse_clippings(file_path):
         lines = [line.strip() for line in entry.strip().split('\n') if line.strip()]
         if len(lines) >= 3:
             book_title = lines[0]
-            # 第 3 行开始是划线正文内容
             text_lines = lines[2:]
             text = "\n".join(text_lines)
             
-            # 过滤无效或纯书签项
             if text and not text.startswith("Bookmark") and not text.startswith("您在位置"):
                 highlights.append({
                     "title": book_title,
@@ -49,10 +62,8 @@ def push_to_bark(book_title, highlight_text):
     print("Bark 推送结果:", res.json())
 
 if __name__ == "__main__":
-    clippings = parse_clippings("My Clippings.txt")
+    clippings = parse_clippings()
     if clippings:
         selected = random.choice(clippings)
         print(f"随机抽取到: 《{selected['title']}》 - {selected['text']}")
         push_to_bark(selected['title'], selected['text'])
-    else:
-        print("未成功解析到有效划线。")
