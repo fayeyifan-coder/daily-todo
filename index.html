@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今日待办清单</title>
+    <title>今日待办与打卡报告</title>
     <style>
         * { box-sizing: border-box; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: #f5f5f7; 
             padding: 20px 16px; 
             margin: 0; 
@@ -15,22 +15,78 @@
         }
         .card { 
             max-width: 420px; 
-            margin: 20px auto; 
+            margin: 0 auto; 
             background: #ffffff; 
             border-radius: 18px; 
             padding: 24px; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
         }
-        h2 { font-size: 22px; margin: 0 0 6px 0; font-weight: 700; }
-        .date { font-size: 14px; color: #86868b; margin-bottom: 20px; }
+        /* 标签导航栏 */
+        .tabs {
+            display: flex;
+            background: #e5e5ea;
+            border-radius: 10px;
+            padding: 2px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #86868b;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: #ffffff;
+            color: #1d1d1f;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h2 { font-size: 20px; margin: 0 0 4px 0; font-weight: 700; }
+        .date { font-size: 13px; color: #86868b; margin-bottom: 16px; }
+
+        /* 心情选择器 */
+        .mood-section {
+            background: #fbfbfd;
+            border: 1px solid #e5e5ea;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 20px;
+        }
+        .mood-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #1d1d1f; }
+        .mood-options { display: flex; justify-content: space-between; gap: 4px; }
+        .mood-btn {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #e5e5ea;
+            border-radius: 10px;
+            padding: 8px 0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        .mood-btn .emoji { font-size: 20px; display: block; margin-bottom: 2px; }
+        .mood-btn.active {
+            border-color: #34c759;
+            background: #eaf9ec;
+            font-weight: bold;
+        }
+
+        /* 待办列表 */
         .item { 
             display: flex; 
             align-items: center; 
-            padding: 14px 0; 
+            padding: 13px 0; 
             border-bottom: 1px solid #f0f0f5; 
             cursor: pointer; 
             user-select: none;
-            transition: opacity 0.2s;
         }
         .item:last-child { border-bottom: none; }
         input[type="checkbox"] { 
@@ -40,40 +96,75 @@
             accent-color: #34c759; 
             cursor: pointer; 
         }
-        .text { font-size: 17px; flex: 1; transition: all 0.2s; }
-        .completed .text { 
-            text-decoration: line-through; 
-            color: #86868b; 
+        .text { font-size: 16px; flex: 1; }
+        .completed .text { text-decoration: line-through; color: #86868b; }
+
+        /* 报告页样式 */
+        .stat-item { margin-bottom: 16px; }
+        .stat-header { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px; font-weight: 500; }
+        .progress-bar { height: 8px; background: #e5e5ea; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #34c759; width: 0%; transition: width 0.4s ease; }
+        .summary-box {
+            background: #f2f2f7;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 20px;
         }
-        .progress-bar {
-            height: 8px;
-            background: #e5e5ea;
-            border-radius: 4px;
-            margin-top: 24px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background: #34c759;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        .progress-text { 
-            margin-top: 10px; 
-            text-align: center; 
-            font-size: 14px; 
-            color: #86868b; 
-            font-weight: 500; 
-        }
+        .summary-num { font-size: 28px; font-weight: 800; color: #34c759; margin-top: 4px; }
+        .mood-history { font-size: 13px; color: #86868b; margin-top: 8px; word-wrap: break-word; }
+        .view-panel { display: none; }
+        .view-panel.active { display: block; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>☀️ 今日待办清单</h2>
-        <div class="date" id="dateStr"></div>
-        <div id="todoList"></div>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-        <div class="progress-text" id="progressStr">完成度: 0 / 6</div>
+        <!-- 顶部导航 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('today')">今日打卡</button>
+            <button class="tab-btn" onclick="switchTab('weekly')">本周周报</button>
+            <button class="tab-btn" onclick="switchTab('monthly')">本月月报</button>
+        </div>
+
+        <!-- 1. 今日待办面板 -->
+        <div id="panel-today" class="view-panel active">
+            <h2>☀️ 今日打卡</h2>
+            <div class="date" id="dateStr"></div>
+
+            <!-- 心情选择区 -->
+            <div class="mood-section" id="moodCard">
+                <div class="mood-title">🌙 记录今天的心情：</div>
+                <div class="mood-options" id="moodOptions"></div>
+            </div>
+
+            <div id="todoList"></div>
+            <div class="progress-bar" style="margin-top:20px;"><div class="progress-fill" id="todayProgressFill"></div></div>
+            <div style="margin-top:8px; text-align:center; font-size:13px; color:#86868b;" id="todayProgressStr">完成度: 0 / 6</div>
+        </div>
+
+        <!-- 2. 周报面板 -->
+        <div id="panel-weekly" class="view-panel">
+            <h2>📊 本周打卡清单报告</h2>
+            <div class="date">统计范围：最近 7 天</div>
+            <div class="summary-box">
+                <div style="font-size:13px; color:#86868b;">本周综合完成率</div>
+                <div class="summary-num" id="weeklyTotalPercent">0%</div>
+                <div class="mood-history" id="weeklyMoods">心情轨迹：无数据</div>
+            </div>
+            <div id="weeklyStatsList"></div>
+        </div>
+
+        <!-- 3. 月报面板 -->
+        <div id="panel-monthly" class="view-panel">
+            <h2>📅 本月打卡总结报告</h2>
+            <div class="date">统计范围：最近 30 天</div>
+            <div class="summary-box">
+                <div style="font-size:13px; color:#86868b;">本月综合完成率</div>
+                <div class="summary-num" id="monthlyTotalPercent">0%</div>
+                <div class="mood-history" id="monthlyMoods">心情轨迹：无数据</div>
+            </div>
+            <div id="monthlyStatsList"></div>
+        </div>
     </div>
 
     <script>
@@ -86,25 +177,40 @@
             { id: 'writing', text: '✍️ 写作' }
         ];
 
-        // 获取今天日期 (YYYY-MM-DD)
+        const moodList = [
+            { id: 'happy', emoji: '🥳', label: '充实' },
+            { id: 'calm', emoji: '😌', label: '平静' },
+            { id: 'good', emoji: '😃', label: '开心' },
+            { id: 'lazy', emoji: '😐', label: '摆烂' },
+            { id: 'tired', emoji: '😫', label: '疲惫' },
+            { id: 'sad', emoji: '😔', label: '低落' }
+        ];
+
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('dateStr').innerText = today;
 
-        // 从 localStorage 中读取今天的状态，如果换天了会自动重置
         let state = JSON.parse(localStorage.getItem('bark_todo_' + today) || '{}');
 
-        function saveState() {
-            localStorage.setItem('bark_todo_' + today, JSON.stringify(state));
-            updateProgress();
-        }
+        // 初始化心情组件
+        const moodContainer = document.getElementById('moodOptions');
+        moodList.forEach(m => {
+            const btn = document.createElement('div');
+            btn.className = 'mood-btn' + (state.mood === m.emoji ? ' active' : '');
+            btn.innerHTML = `<span class="emoji">${m.emoji}</span>${m.label}`;
+            btn.onclick = () => {
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+                if (state.mood === m.emoji) {
+                    delete state.mood;
+                } else {
+                    state.mood = m.emoji;
+                    btn.classList.add('active');
+                }
+                localStorage.setItem('bark_todo_' + today, JSON.stringify(state));
+            };
+            moodContainer.appendChild(btn);
+        });
 
-        function updateProgress() {
-            const completedCount = Object.values(state).filter(Boolean).length;
-            const percent = (completedCount / tasks.length) * 100;
-            document.getElementById('progressFill').style.width = percent + '%';
-            document.getElementById('progressStr').innerText = `完成度: ${completedCount} / ${tasks.length}`;
-        }
-
+        // 初始化今日任务列表
         const listEl = document.getElementById('todoList');
         tasks.forEach(task => {
             const item = document.createElement('div');
@@ -119,23 +225,96 @@
             text.innerText = task.text;
 
             const toggle = (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                }
+                if (e.target !== checkbox) checkbox.checked = !checkbox.checked;
                 state[task.id] = checkbox.checked;
                 item.classList.toggle('completed', checkbox.checked);
-                saveState();
+                localStorage.setItem('bark_todo_' + today, JSON.stringify(state));
+                updateTodayProgress();
             };
 
             checkbox.addEventListener('change', toggle);
             item.addEventListener('click', toggle);
-
             item.appendChild(checkbox);
             item.appendChild(text);
             listEl.appendChild(item);
         });
 
-        updateProgress();
+        function updateTodayProgress() {
+            const completedCount = tasks.filter(t => state[t.id]).length;
+            const percent = (completedCount / tasks.length) * 100;
+            document.getElementById('todayProgressFill').style.width = percent + '%';
+            document.getElementById('todayProgressStr').innerText = `完成度: ${completedCount} / ${tasks.length}`;
+        }
+        updateTodayProgress();
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                b.classList.toggle('active', ['today','weekly','monthly'][i] === tabName);
+            });
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + tabName).classList.add('active');
+
+            if (tabName === 'weekly') renderReport(7, 'weeklyStatsList', 'weeklyTotalPercent', 'weeklyMoods');
+            if (tabName === 'monthly') renderReport(30, 'monthlyStatsList', 'monthlyTotalPercent', 'monthlyMoods');
+        }
+
+        function renderReport(days, listContainerId, totalPercentId, moodContainerId) {
+            const stats = {};
+            tasks.forEach(t => stats[t.id] = 0);
+            const moodRecords = [];
+            
+            const now = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                let d = new Date(now);
+                d.setDate(d.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+                let dayData = JSON.parse(localStorage.getItem('bark_todo_' + dateStr) || '{}');
+                
+                tasks.forEach(t => { if (dayData[t.id]) stats[t.id]++; });
+                if (dayData.mood) moodRecords.push(dayData.mood);
+            }
+
+            const container = document.getElementById(listContainerId);
+            container.innerHTML = '';
+            let totalChecks = 0;
+
+            tasks.forEach(task => {
+                const count = stats[task.id];
+                totalChecks += count;
+                const percent = Math.round((count / days) * 100);
+
+                const item = document.createElement('div');
+                item.className = 'stat-item';
+                item.innerHTML = `
+                    <div class="stat-header">
+                        <span>${task.text}</span>
+                        <span style="color:#86868b;">${count} / ${days} 天 (${percent}%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percent}%;"></div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            const totalPossible = days * tasks.length;
+            const overallPercent = Math.round((totalChecks / totalPossible) * 100);
+            document.getElementById(totalPercentId).innerText = overallPercent + '%';
+            
+            document.getElementById(moodContainerId).innerText = moodRecords.length > 0 
+                ? '心情轨迹：' + moodRecords.join(' ') 
+                : '心情轨迹：暂无记录';
+        }
+
+        // 解析 URL 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewMode = urlParams.get('view');
+        if (viewMode === 'weekly' || viewMode === 'monthly') {
+            switchTab(viewMode);
+        }
+        if (urlParams.get('focus') === 'mood') {
+            document.getElementById('moodCard').scrollIntoView({ behavior: 'smooth' });
+        }
     </script>
 </body>
 </html>
