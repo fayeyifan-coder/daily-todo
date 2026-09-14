@@ -1,23 +1,61 @@
-name: Bark Daily Todo Push
+name: Bark Morning & Evening Push
 
 on:
   schedule:
-    # UTC 时间 00:00 对应北京时间 (UTC+8) 早上 08:00
-    - cron: '0 0 * * *'
-  workflow_dispatch: # 允许在 GitHub 界面手动点击测试
+    # 每天 UTC 00:00 (北京时间 08:00) 和 UTC 12:00 (北京时间 20:00) 运行
+    - cron: '0 0,12 * * *'
+  workflow_dispatch:
 
 jobs:
   push:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Push Notification to Bark
+      - name: Send Timed Bark Notification
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          CHECKLIST_URL: ${{ secrets.CHECKLIST_URL }}
         run: |
-          curl -X POST "https://api.day.app/${{ secrets.BARK_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "title": "☀️ 今日待办清单",
-              "body": "• 背单词\n• 看书\n• 看新闻\n• 写日记\n• 修文\n• 写作\n\n👉 点击直接开始互动打卡",
+          python3 -c '
+          import os, requests, datetime
+
+          tz = datetime.timezone(datetime.timedelta(hours=8))
+          now = datetime.datetime.now(tz)
+
+          bark_key = os.environ.get("BARK_KEY")
+          base_url = os.environ.get("CHECKLIST_URL")
+          sep = "&" if "?" in base_url else "?"
+
+          # 早八点推送 (UTC 00:00 -> BJ 08:00)
+          if now.hour < 12:
+              title = "☀️ 早安！今日待办清单"
+              body = "• 背单词\n• 看书\n• 看新闻\n• 写日记\n• 修文\n• 写作\n\n👉 点击开始今天打卡"
+              target_url = base_url
+
+          # 晚八点推送 (UTC 12:00 -> BJ 20:00)
+          else:
+              # 周六晚推送周报
+              if now.weekday() == 5:
+                  title = "📊 周六晚复盘：本周打卡周报已生成！"
+                  body = "检查今天任务完成度，并记录今天的心情，顺便看看本周成果吧～\n\n👉 点击进行晚间复盘"
+                  target_url = f"{base_url}{sep}view=weekly"
+              # 1号晚推送月报
+              elif now.day == 1:
+                  title = "📅 月度复盘：打卡总结报告已生成！"
+                  body = "今天打卡完成了吗？记录完心情后来看看本月总结～\n\n👉 点击查看月度总结"
+                  target_url = f"{base_url}{sep}view=monthly"
+              else:
+                  title = "🌙 晚安！今日复盘与心情记录"
+                  body = "今天打卡都完成了吗？别忘了记录今天的心情哦～\n\n👉 点击划掉打卡并记录心情"
+                  target_url = f"{base_url}{sep}focus=mood"
+
+          payload = {
+              "title": title,
+              "body": body,
               "group": "每日待办",
               "icon": "https://img.icons8.com/emoji/96/check-mark-button-emoji.png",
-              "url": "${{ secrets.CHECKLIST_URL }}"
-            }'
+              "url": target_url
+          }
+
+          res = requests.post(f"https://api.day.app/{bark_key}", json=payload)
+          print("Bark 响应:", res.json())
+          '
