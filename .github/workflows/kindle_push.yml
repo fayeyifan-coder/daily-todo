@@ -1,0 +1,27 @@
+name: Daily Kindle Highlight Push
+
+on:
+  schedule:
+    # 每天 UTC 00:00 (北京时间 08:00) 运行
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 支持手动点击测试
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 安装依赖
+        run: pip install requests
+
+      - name: 运行划线抽取脚本
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+        run: python kindle_push.py
