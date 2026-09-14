@@ -1,0 +1,23 @@
+name: Bark Daily Todo Push
+
+on:
+  schedule:
+    # UTC 时间 00:00 对应北京时间 (UTC+8) 早上 08:00
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许在 GitHub 界面手动点击测试
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Push Notification to Bark
+        run: |
+          curl -X POST "https://api.day.app/${{ secrets.BARK_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "title": "☀️ 今日待办清单",
+              "body": "• 背单词\n• 看书\n• 看新闻\n• 写日记\n• 修文\n• 写作\n\n👉 点击直接开始互动打卡",
+              "group": "每日待办",
+              "icon": "https://img.icons8.com/emoji/96/check-mark-button-emoji.png",
+              "url": "${{ secrets.CHECKLIST_URL }}"
+            }'
