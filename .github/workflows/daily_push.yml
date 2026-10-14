@@ -2,8 +2,8 @@ name: Bark Morning & Evening Push
 
 on:
   schedule:
-    # 每天 UTC 00:00 (北京时间 08:00) 和 UTC 12:00 (北京时间 20:00) 运行
-    - cron: '0 0,12 * * *'
+    # 每天 UTC 00:17 (北京时间 08:17) 和 UTC 12:17 (北京时间 20:17) 运行，避开整点高峰
+    - cron: '17 0,12 * * *'
   workflow_dispatch:
 
 jobs:

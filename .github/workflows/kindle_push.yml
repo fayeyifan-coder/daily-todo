@@ -2,8 +2,8 @@ name: Daily Kindle Highlight Push
 
 on:
   schedule:
-    # 每天 UTC 00:00 (北京时间 08:00) 运行
-    - cron: '0 7 * * *'
+    # 每天 UTC 07:17 (北京时间 15:17) 运行，避开整点高峰
+    - cron: '17 7 * * *'
   workflow_dispatch: # 支持手动点击测试
 
 jobs:
